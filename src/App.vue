@@ -1,33 +1,19 @@
 <script setup>
-  import {ref, reactive, onMounted, computed} from "vue"
+  import {ref, reactive} from "vue"
 
   import Alerta from "./components/Alerta.vue"
   import Spinner from "./components/Spinner.vue"
+  import Cotizacion from "./components/Cotizacion.vue"
 
-  const monedas = ref([ // state
-      { codigo: 'USD', texto: 'Dolar de Estados Unidos'},
-      { codigo: 'MXN', texto: 'Peso Mexicano'},
-      { codigo: 'EUR', texto: 'Euro'},
-      { codigo: 'GBP', texto: 'Libra Esterlina'},
-      { codigo: 'ARG', texto: 'Peso Argentino'},
-  ])
+  import useCripto from "./composables/useCripto"
 
-  const criptomonedas = ref([]) // state
+  const {criptomonedas, monedas, cotizacion, cargando, obtenerCotizacion, mostrarResultado} = useCripto()
+
   const error = ref("") // state
 
-  const cotizar = reactive({ // state
+  const cotizar = reactive({ // state local (state del componente)
     moneda: "",
     criptomoneda: "",
-  })
-
-  const cotizacion = ref({}) // state
-  const cargando = ref(false) // state
-
-  onMounted(() => { // el codigo aca adentro se ejecuta apenas termina de cargarse el componente
-    const url = "https://min-api.cryptocompare.com/data/top/mktcapfull?limit=20&tsym=USD"
-    fetch(url)
-      .then(respuesta => respuesta.json())
-      .then( ({Data}) => criptomonedas.value = Data )
   })
   
   const cotizarCripto = () => {
@@ -36,33 +22,8 @@
       return 
     }
     error.value = ""
-    obtenerCotizacion()
+    obtenerCotizacion(cotizar)
   }
-
-  const obtenerCotizacion = async() => {
-    
-    cotizacion.value = {}
-    cargando.value = true
-    
-    try {
-      const {moneda, criptomoneda} = cotizar
-      const url = `https://min-api.cryptocompare.com/data/pricemultifull?fsyms=${criptomoneda}&tsyms=${moneda}`
-      
-      const respuesta = await fetch(url)
-      const data = await respuesta.json()
-
-      cotizacion.value = data.DISPLAY[criptomoneda][moneda]
-    } catch (error) {
-      console.log(error);
-    } finally { 
-      // el finally se ejecuta siempre, independientemente de que se ejecute el try o el catch
-      cargando.value = false
-    }
-  }
-
-  const mostrarResultado = computed( () => {
-    return Object.keys(cotizacion.value).length > 0
-  })
 
 </script>
 
@@ -110,26 +71,10 @@
         <input type="submit" value="Cotizar" />
       </form>
       <Spinner v-if="cargando" />
-
-      <div
-        class="contenedor-resultado"
-        v-if="mostrarResultado"  
-      >
-        <h2>Cotización</h2>
-        <div class="resultado">
-          <img 
-            :src="'https://cryptocompare.com/' + cotizacion.IMAGEURL" 
-            alt="imagen cripto"
-          >
-          <div>
-            <p>El precio es de: <span>{{cotizacion.PRICE}}</span></p>
-            <p>Precio más alto del día: <span>{{cotizacion.HIGHDAY}}</span></p>
-            <p>Precio más bajo del día: <span>{{cotizacion.LOWDAY}}</span></p>
-            <p>Variación últimas 24 horas: <span>{{cotizacion.CHANGEPCT24HOUR}}%</span></p>
-            <p>Ultima actualización: <span>{{cotizacion.LASTUPDATE}}</span></p>
-          </div>
-        </div>
-      </div>
+      <Cotizacion 
+        v-if="mostrarResultado" 
+        :cotizacion="cotizacion"  
+      />
     </div>
   </div>
 </template>
